@@ -36,7 +36,7 @@ if [ $totalm -lt 4000 ]; then
   print_status "Server memory is less then 4GB..."
   if ! grep -q '/swapfile' /etc/fstab ; then
     print_status "Creating a 4GB swapfile..."
-    fallocate -l 4G /swapfile
+    fallocate -l 2G /swapfile
     chmod 600 /swapfile
     mkswap /swapfile
     swapon /swapfile
@@ -47,6 +47,9 @@ fi
 # Populating Cache
 print_status "Populating apt-get cache..."
 apt-get update
+
+print_status "Installing docker pre-requisities..."
+apt-get install -y apt-transport-https ca-certificates curl gnupg2 software-properties-common
 
 print_status "Installing packages required for setup..."
 apt-get install -y docker.io apt-transport-https lsb-release curl fail2ban unattended-upgrades > /dev/null 2>&1
