@@ -49,10 +49,15 @@ print_status "Populating apt-get cache..."
 apt-get update
 
 print_status "Installing docker pre-requisities..."
-apt-get install -y apt-transport-https ca-certificates curl gnupg2 software-properties-common
+apt-get install -y apt-transport-https ca-certificates curl gnupg2 software-properties-common > /dev/null 2>&1
+curl -fsSL https://download.docker.com/linux/$(. /etc/os-release; echo "$ID")/gpg | sudo apt-key add -
+add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/$(. /etc/os-release; echo "$ID") $(lsb_release -cs) stable"
+
+print_status "Repopulating apt-get cache with docker..."
+apt-get update
 
 print_status "Installing packages required for setup..."
-apt-get install -y docker.io apt-transport-https lsb-release curl fail2ban unattended-upgrades > /dev/null 2>&1
+apt-get install -y docker-ce lsb-release fail2ban unattended-upgrades > /dev/null 2>&1
 
 systemctl enable docker
 systemctl start docker
