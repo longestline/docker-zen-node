@@ -8,8 +8,8 @@ print_status() {
     echo
 }
 
-if [ $# -ne 4 ]; then
-    echo "Execution format ./install.sh stakeaddr email fqdn region (eu, na or sea)"
+if [ $# -ne 5 ]; then
+    echo "Execution format ./install.sh stakeaddr email fqdn region (eu, na or sea) blockchain_ip"
     exit
 fi
 
@@ -18,8 +18,9 @@ stakeaddr=${1}
 email=${2}
 fqdn=${3}
 region=${4}
+blockchain=${5}
 
-testnet=1
+testnet=0
 rpcpassword=$(head -c 32 /dev/urandom | base64)
 
 print_status "Installing the ZenCash node..."
@@ -36,7 +37,7 @@ if [ $totalm -lt 4000 ]; then
   print_status "Server memory is less then 4GB..."
   if ! grep -q '/swapfile' /etc/fstab ; then
     print_status "Creating a 4GB swapfile..."
-    fallocate -l 2G /swapfile
+    fallocate -l 4G /swapfile
     chmod 600 /swapfile
     mkswap /swapfile
     swapon /swapfile
@@ -50,20 +51,28 @@ apt-get update
 
 print_status "Installing docker pre-requisities..."
 apt-get install -y apt-transport-https ca-certificates curl gnupg2 software-properties-common > /dev/null 2>&1
-curl -fsSL https://download.docker.com/linux/$(. /etc/os-release; echo "$ID")/gpg | sudo apt-key add -
+curl -fsSL https://download.docker.com/linux/$(. /etc/os-release; echo "$ID")/gpg | apt-key add -
 add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/$(. /etc/os-release; echo "$ID") $(lsb_release -cs) stable"
 
 print_status "Repopulating apt-get cache with docker..."
 apt-get update
 
 print_status "Installing packages required for setup..."
-apt-get install -y docker-ce lsb-release fail2ban unattended-upgrades > /dev/null 2>&1
+apt-get install -y docker-ce lsb-release fail2ban unattended-upgrades ufw > /dev/null 2>&1
 
 systemctl enable docker
 systemctl start docker
 
 print_status "Creating the docker mount directories..."
 mkdir -p /mnt/zen/{config,data,zcash-params,certs}
+
+print_status "Downloading snapshot..."
+#downloading snapshot
+cd /mnt/zen/config && wget http://$blockchain/zen.tgz && tar xfz /mnt/zen/config/zen.tgz && rm /mnt/zen/config/zen.tgz
+
+print_status "Changing SSH conf"
+echo "PasswordAuthentication no" >> /etc/ssh/sshd_config
+service sshd restart
 
 print_status "Installing acme container service..."
 
@@ -192,7 +201,6 @@ ufw limit ssh/tcp
 ufw allow http/tcp
 ufw allow https/tcp
 ufw allow 9033/tcp
-ufw allow 19033/tcp
 ufw --force enable
 
 print_status "Enabling fail2ban services..."
